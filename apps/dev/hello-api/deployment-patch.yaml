@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: hello-api
+          image: ghcr.io/asgermunk-homelab/hello-api:1-d9af05ce-1791476889-dev # {"$imagepolicy": "flux-system:hello-api-dev"}
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development

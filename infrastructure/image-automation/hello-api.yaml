@@ -1,0 +1,26 @@
+# Flux scans GHCR for new hello-api tags. The package is public, so no secretRef.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: hello-api
+  namespace: flux-system
+spec:
+  image: ghcr.io/asgermunk-homelab/hello-api
+  interval: 1m
+---
+# The newest "-dev" tag wins, sorted by the unix time in the tag.
+# Tag format: <run_number>-<short sha>-<unix time>-<env>
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: hello-api-dev
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: hello-api
+  filterTags:
+    pattern: '^\d+-[a-f0-9]+-(?P<ts>\d+)-dev$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc

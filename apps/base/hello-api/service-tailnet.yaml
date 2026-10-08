@@ -1,0 +1,17 @@
+# The Tailscale operator publishes this Service on the tailnet.
+# The overlay sets the hostname for each environment.
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-api-tailnet
+  annotations:
+    tailscale.com/hostname: hello-api
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app: hello-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
