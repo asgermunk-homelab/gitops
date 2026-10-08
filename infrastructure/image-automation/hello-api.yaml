@@ -24,3 +24,19 @@ spec:
   policy:
     numerical:
       order: asc
+---
+# The newest "-prod" tag wins. Only the promote job in hello-api makes these tags.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: hello-api-prod
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: hello-api
+  filterTags:
+    pattern: '^\d+-[a-f0-9]+-(?P<ts>\d+)-prod$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
