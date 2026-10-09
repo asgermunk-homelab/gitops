@@ -1,0 +1,12 @@
+# The address inside the cluster: http://__APP__.<namespace>
+apiVersion: v1
+kind: Service
+metadata:
+  name: __APP__
+spec:
+  selector:
+    app: __APP__
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

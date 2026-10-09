@@ -1,0 +1,42 @@
+# Flux scans GHCR for new __APP__ tags. The package must be public, so no secretRef.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImageRepository
+metadata:
+  name: __APP__
+  namespace: flux-system
+spec:
+  image: ghcr.io/asgermunk-homelab/__APP__
+  interval: 1m
+---
+# The newest "-dev" tag wins, sorted by the unix time in the tag.
+# Tag format: <run_number>-<short sha>-<unix time>-<env>
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: __APP__-dev
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: __APP__
+  filterTags:
+    pattern: '^\d+-[a-f0-9]+-(?P<ts>\d+)-dev$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+---
+# The newest "-prod" tag wins. Only the promote job in the app repo makes these tags.
+apiVersion: image.toolkit.fluxcd.io/v1
+kind: ImagePolicy
+metadata:
+  name: __APP__-prod
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: __APP__
+  filterTags:
+    pattern: '^\d+-[a-f0-9]+-(?P<ts>\d+)-prod$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc

@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __APP__
+spec:
+  template:
+    spec:
+      containers:
+        - name: __APP__
+          image: ghcr.io/asgermunk-homelab/__APP__:__PROD_TAG__ # {"$imagepolicy": "flux-system:__APP__-prod"}
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
