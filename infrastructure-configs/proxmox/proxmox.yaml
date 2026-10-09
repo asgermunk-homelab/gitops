@@ -1,0 +1,67 @@
+# https://proxmox.lab.munkcloud.dk -> Traefik -> https://192.168.0.10:8006 (the Proxmox UI).
+# Tailnet only: *.lab.munkcloud.dk points to Traefik's Tailscale IP.
+# The name works only while k3s runs. The break-glass route is https://pve.tail5a1bc5.ts.net.
+
+# A Service with no selector. The EndpointSlice below gives it the host address.
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxmox
+  namespace: kube-system
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: https
+    traefik.ingress.kubernetes.io/service.serverstransport: kube-system-proxmox@kubernetescrd
+spec:
+  ports:
+    - name: https
+      port: 8006
+      targetPort: 8006
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: proxmox-host
+  namespace: kube-system
+  labels:
+    kubernetes.io/service-name: proxmox
+    endpointslice.kubernetes.io/managed-by: flux
+addressType: IPv4
+ports:
+  - name: https
+    port: 8006
+    protocol: TCP
+endpoints:
+  - addresses:
+      - 192.168.0.10
+---
+# Proxmox uses a self-signed certificate. Traefik skips the check for this one LAN hop.
+# The browser still gets the real wildcard certificate from Traefik.
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: proxmox
+  namespace: kube-system
+spec:
+  insecureSkipVerify: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proxmox
+  namespace: kube-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: proxmox.lab.munkcloud.dk
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proxmox
+                port:
+                  name: https
