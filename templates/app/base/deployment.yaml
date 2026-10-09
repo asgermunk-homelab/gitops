@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __APP__
+  labels:
+    app: __APP__
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: __APP__
+  template:
+    metadata:
+      labels:
+        app: __APP__
+    spec:
+      containers:
+        - name: __APP__
+          # The overlay sets the tag for each environment.
+          image: ghcr.io/asgermunk-homelab/__APP__
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
