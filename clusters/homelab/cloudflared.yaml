@@ -1,0 +1,16 @@
+# The Cloudflare Tunnel. Separate from "infrastructure", so a failure here
+# does not stop apps-dev and apps-prod.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudflared
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./infrastructure/cloudflared
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
