@@ -1,0 +1,6 @@
+# Flux owns this namespace. The Secret tunnel-token is made by hand in it (not in Git).
+# If you delete this file, Flux deletes the namespace, and the Secret with it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflared
