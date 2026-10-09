@@ -4,3 +4,4 @@ resources:
   - cluster-issuers.yaml
   - traefik
   - proxmox
+  - openbao

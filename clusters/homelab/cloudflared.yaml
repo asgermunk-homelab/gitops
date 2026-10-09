@@ -6,6 +6,9 @@ metadata:
   name: cloudflared
   namespace: flux-system
 spec:
+  # The ExternalSecret needs the ESO CRDs from "infrastructure".
+  dependsOn:
+    - name: infrastructure
   interval: 10m
   path: ./infrastructure/cloudflared
   prune: true

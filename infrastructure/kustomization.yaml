@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - image-automation
   - cert-manager
+  - external-secrets
 # cloudflared is not listed here on purpose. It has its own Flux Kustomization
 # (clusters/homelab/cloudflared.yaml), so a broken tunnel cannot block the apps.
