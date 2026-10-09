@@ -1,0 +1,44 @@
+# Let's Encrypt with the DNS-01 challenge through Cloudflare.
+# The token is the Secret cloudflare-api-token in the namespace cert-manager.
+# It is made by hand with kubectl and is not in Git.
+# No email: Let's Encrypt sends no expiry mail any more, and the repository is public.
+
+# Staging: for tests. The certificates are not trusted, but the rate limits are high.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-staging-account
+    solvers:
+      - selector:
+          dnsZones:
+            - munkcloud.dk
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+---
+# Production: trusted certificates. Use it after staging works.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-account
+    solvers:
+      - selector:
+          dnsZones:
+            - munkcloud.dk
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
