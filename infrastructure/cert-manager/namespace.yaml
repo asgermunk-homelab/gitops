@@ -1,4 +1,4 @@
-# Flux owns this namespace. The Secret cloudflare-api-token is made by hand in it (not in Git).
+# Flux owns this namespace. ESO makes the Secret cloudflare-api-token in it from OpenBao.
 # If you delete this file, Flux deletes the namespace, and the Secret with it.
 apiVersion: v1
 kind: Namespace

@@ -1,0 +1,83 @@
+# https://openbao.lab.munkcloud.dk -> Traefik -> https://192.168.0.30:8200 (the OpenBao UI).
+# Tailnet only. Traefik checks the OpenBao certificate with the homelab CA below.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openbao-ca
+  namespace: kube-system
+data:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIBkDCCATWgAwIBAgIUTf3cynW59tQMSwUtoohjyGHiPY8wCgYIKoZIzj0EAwIw
+    HTEbMBkGA1UEAwwSaG9tZWxhYi1vcGVuYmFvLWNhMB4XDTI2MTAwOTIyNDIxMVoX
+    DTM2MTAwNjIyNDIxMVowHTEbMBkGA1UEAwwSaG9tZWxhYi1vcGVuYmFvLWNhMFkw
+    EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9CXiBjiTUSkKhlio+gUR615zYugFvzdS
+    lyR3MUUbBjBfpdoBlokoK3mssByMSGV71gTME3HaZoSF+pTE4b82o6NTMFEwHQYD
+    VR0OBBYEFB1zIVrnZLCviw0NriQW+M7rtwseMB8GA1UdIwQYMBaAFB1zIVrnZLCv
+    iw0NriQW+M7rtwseMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIh
+    APcU+5AbKlai8OcKpDFAKYIS66HgyLqbimk/V90fe4KMAiEA73bV9rxkmxefjxF3
+    QihScTp44+eB4rI1GIE+unp6t70=
+    -----END CERTIFICATE-----
+---
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: openbao
+  namespace: kube-system
+spec:
+  serverName: openbao.lab.munkcloud.dk
+  rootCAs:
+    - configMap: openbao-ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openbao
+  namespace: kube-system
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: https
+    traefik.ingress.kubernetes.io/service.serverstransport: kube-system-openbao@kubernetescrd
+spec:
+  ports:
+    - name: https
+      port: 8200
+      targetPort: 8200
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: openbao-lxc
+  namespace: kube-system
+  labels:
+    kubernetes.io/service-name: openbao
+    endpointslice.kubernetes.io/managed-by: flux
+addressType: IPv4
+ports:
+  - name: https
+    port: 8200
+    protocol: TCP
+endpoints:
+  - addresses:
+      - 192.168.0.30
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openbao
+  namespace: kube-system
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: openbao.lab.munkcloud.dk
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: openbao
+                port:
+                  name: https
