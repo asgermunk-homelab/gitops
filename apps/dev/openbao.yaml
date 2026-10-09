@@ -41,5 +41,10 @@ spec:
           role: dev
           serviceAccountRef:
             name: openbao
+            # OpenBao checks the role audience "openbao". It also sends this same
+            # token to the k3s API for the TokenReview, so the token must be valid
+            # for the API audiences too.
             audiences:
               - openbao
+              - https://kubernetes.default.svc.cluster.local
+              - k3s
