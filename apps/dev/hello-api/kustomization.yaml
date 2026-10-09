@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: dev
 resources:
   - ../../base/hello-api
+  - ingress.yaml
 patches:
   - path: deployment-patch.yaml
   - path: service-tailnet-patch.yaml

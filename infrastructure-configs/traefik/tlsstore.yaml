@@ -1,0 +1,10 @@
+# Traefik uses the wildcard as the default certificate. Thus an Ingress
+# for <name>.lab.munkcloud.dk needs no tls section of its own.
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+spec:
+  defaultCertificate:
+    secretName: wildcard-lab-munkcloud-dk-tls
