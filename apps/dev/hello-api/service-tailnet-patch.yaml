@@ -1,6 +1,8 @@
+# Dev has no own tailnet device any more. It is reachable at
+# https://hello-api-dev.lab.munkcloud.dk through Traefik (see ingress.yaml).
+# This patch removes the base Service hello-api-tailnet from the dev overlay.
 apiVersion: v1
 kind: Service
 metadata:
   name: hello-api-tailnet
-  annotations:
-    tailscale.com/hostname: hello-api-dev
+$patch: delete
