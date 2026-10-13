@@ -32,6 +32,19 @@ spec:
     crds: CreateReplace
     remediation:
       retries: 3
+  # The chart has no switch for the multi-cluster dashboard. The homelab has one cluster.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: ConfigMap
+              name: kube-prometheus-stack-k8s-resources-multicluster
+            patch: |
+              $patch: delete
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: kube-prometheus-stack-k8s-resources-multicluster
   values:
     alertmanager:
       enabled: false
@@ -99,6 +112,14 @@ spec:
         limits:
           memory: 256Mi
 
+    # Only Linux. This also removes the AIX and the macOS dashboards.
+    nodeExporter:
+      operatingSystems:
+        aix:
+          enabled: false
+        darwin:
+          enabled: false
+
     prometheus-node-exporter:
       resources:
         requests:
@@ -125,6 +146,9 @@ spec:
         analytics:
           reporting_enabled: false
           check_for_updates: false
+        # The sidecar writes each dashboard ConfigMap to /tmp/dashboards.
+        dashboards:
+          default_home_dashboard_path: /tmp/dashboards/homelab-overview.json
       # Tailnet only. The wildcard certificate *.lab.munkcloud.dk covers the name.
       ingress:
         enabled: true
@@ -134,9 +158,10 @@ spec:
           traefik.ingress.kubernetes.io/router.tls: "true"
         hosts:
           - grafana.lab.munkcloud.dk
+      # 512Mi was too low: the OOM killer stopped Grafana on 2026-10-13.
       resources:
         requests:
           cpu: 50m
-          memory: 128Mi
+          memory: 256Mi
         limits:
-          memory: 512Mi
+          memory: 1Gi
