@@ -21,6 +21,13 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+          # OpenTelemetry: the app sends its logs, traces and metrics to Alloy.
+          # The overlay adds deployment.environment.name.
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.monitoring.svc.cluster.local:4317
+            - name: OTEL_SERVICE_NAME
+              value: __APP__
           readinessProbe:
             httpGet:
               path: /healthz

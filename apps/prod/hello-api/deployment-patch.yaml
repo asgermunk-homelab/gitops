@@ -11,3 +11,5 @@ spec:
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: Production
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: deployment.environment.name=prod

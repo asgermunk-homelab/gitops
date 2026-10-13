@@ -4,6 +4,9 @@ resources:
   - namespace.yaml
   - openbao.yaml
   - release.yaml
+  - loki.yaml
+  - tempo.yaml
+  - alloy.yaml
 # Own dashboards. The Grafana sidecar loads each ConfigMap with the label
 # grafana_dashboard: "1". Change a dashboard here, not in the UI.
 configMapGenerator:

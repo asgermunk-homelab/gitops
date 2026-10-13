@@ -97,6 +97,15 @@ spec:
         ruleSelectorNilUsesHelmValues: false
         probeSelectorNilUsesHelmValues: false
         scrapeConfigSelectorNilUsesHelmValues: false
+        # Alloy sends the app metrics here over OTLP (/api/v1/otlp).
+        enableOTLPReceiver: true
+        otlp:
+          # These resource attributes become labels on each app metric.
+          promoteResourceAttributes:
+            - deployment.environment.name
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.deployment.name
         resources:
           requests:
             cpu: 100m
@@ -149,6 +158,39 @@ spec:
         # The sidecar writes each dashboard ConfigMap to /tmp/dashboards.
         dashboards:
           default_home_dashboard_path: /tmp/dashboards/homelab-overview.json
+      # Loki and Tempo. The links let you go from a trace to its logs, and back.
+      additionalDataSources:
+        - name: Loki
+          uid: loki
+          type: loki
+          url: http://loki.monitoring.svc.cluster.local:3100
+          jsonData:
+            derivedFields:
+              - name: Trace
+                matcherType: label
+                matcherRegex: trace_id
+                datasourceUid: tempo
+                url: "$${__value.raw}"
+                urlDisplayLabel: Open the trace
+        - name: Tempo
+          uid: tempo
+          type: tempo
+          url: http://tempo.monitoring.svc.cluster.local:3200
+          jsonData:
+            tracesToLogsV2:
+              datasourceUid: loki
+              filterByTraceID: true
+              spanStartTimeShift: "-5m"
+              spanEndTimeShift: "5m"
+              tags:
+                - key: service.name
+                  value: service_name
+            lokiSearch:
+              datasourceUid: loki
+            serviceMap:
+              datasourceUid: prometheus
+            nodeGraph:
+              enabled: true
       # Tailnet only. The wildcard certificate *.lab.munkcloud.dk covers the name.
       ingress:
         enabled: true
