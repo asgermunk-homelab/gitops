@@ -1,0 +1,20 @@
+# Prometheus, Grafana and the exporters. Separate from "infrastructure", so a
+# broken monitoring stack cannot block the apps.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: monitoring
+  namespace: flux-system
+spec:
+  # The ExternalSecret needs the ESO CRDs from "infrastructure".
+  dependsOn:
+    - name: infrastructure
+  interval: 10m
+  path: ./infrastructure/monitoring
+  prune: true
+  wait: true
+  # The first install pulls several images and makes the CRDs.
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
