@@ -1,0 +1,6 @@
+# Flux owns this namespace. ESO makes the Secret grafana-admin in it from OpenBao.
+# If you delete this file, Flux deletes the namespace, and the Prometheus data with it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring

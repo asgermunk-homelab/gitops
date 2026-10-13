@@ -1,0 +1,142 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: prometheus-community
+  namespace: monitoring
+spec:
+  interval: 24h
+  url: https://prometheus-community.github.io/helm-charts
+---
+# kube-prometheus-stack: Prometheus, Grafana, kube-state-metrics, node-exporter
+# and the standard Kubernetes dashboards. No alerting (Alertmanager is off).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: 92.3.1
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    # The chart does not update its CRDs by itself.
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    alertmanager:
+      enabled: false
+
+    # k3s runs the controller manager, the scheduler and kube-proxy inside one
+    # process, and uses SQLite, not etcd. These targets would show as down.
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+    kubeProxy:
+      enabled: false
+    defaultRules:
+      rules:
+        alertmanager: false
+        etcd: false
+        kubeControllerManager: false
+        kubeProxy: false
+        kubeSchedulerAlerting: false
+        kubeSchedulerRecording: false
+        windows: false
+
+    prometheusOperator:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+
+    prometheus:
+      prometheusSpec:
+        retention: 14d
+        # Prometheus deletes the oldest data first when it reaches this size.
+        retentionSize: 8GB
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 10Gi
+        # Also scrape the ServiceMonitors and PodMonitors of other charts and apps,
+        # not only the ones with the label of this release.
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+        scrapeConfigSelectorNilUsesHelmValues: false
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            memory: 1536Mi
+
+    kube-state-metrics:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
+
+    prometheus-node-exporter:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 128Mi
+
+    grafana:
+      # The Secret comes from OpenBao (openbao.yaml).
+      admin:
+        existingSecret: grafana-admin
+        userKey: admin-user
+        passwordKey: admin-password
+      # Keeps the dashboards that you make in the UI. The standard dashboards
+      # come from ConfigMaps of the chart.
+      persistence:
+        enabled: true
+        storageClassName: local-path
+        size: 1Gi
+      grafana.ini:
+        server:
+          root_url: https://grafana.lab.munkcloud.dk
+        analytics:
+          reporting_enabled: false
+          check_for_updates: false
+      # Tailnet only. The wildcard certificate *.lab.munkcloud.dk covers the name.
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+          traefik.ingress.kubernetes.io/router.tls: "true"
+        hosts:
+          - grafana.lab.munkcloud.dk
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
