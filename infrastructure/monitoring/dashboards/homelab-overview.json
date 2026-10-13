@@ -33,7 +33,6 @@
   "annotations": {
     "list": []
   },
-  "links": [],
   "panels": [
     {
       "id": 1,
@@ -797,6 +796,18 @@
           "values": false
         }
       }
+    }
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "homelab"
+      ],
+      "asDropdown": false,
+      "title": "Homelab",
+      "includeVars": false,
+      "keepTime": true
     }
   ]
 }
