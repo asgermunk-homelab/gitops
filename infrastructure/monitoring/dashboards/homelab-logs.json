@@ -9,7 +9,7 @@
   "graphTooltip": 1,
   "refresh": "30s",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "time": {
     "from": "now-1h",
     "to": "now"
@@ -105,6 +105,18 @@
         "hide": 0
       },
       {
+        "name": "traceid",
+        "label": "Trace ID",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "description": "A trace ID, for example from an error message or from Tempo. Filters all panels to that one request."
+      },
+      {
         "name": "search",
         "label": "Search",
         "type": "textbox",
@@ -142,7 +154,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "sum(count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` [$__range]))",
+          "expr": "sum(count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\" [$__range]))",
           "refId": "A",
           "legendFormat": "",
           "queryType": "instant"
@@ -195,7 +207,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "sum(count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"error|critical|fatal\" |~ `(?i)${search:regex}` [$__range]))",
+          "expr": "sum(count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"error|critical|fatal\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\" [$__range]))",
           "refId": "A",
           "legendFormat": "",
           "queryType": "instant"
@@ -260,7 +272,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "sum(count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=\"warn\" |~ `(?i)${search:regex}` [$__range]))",
+          "expr": "sum(count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=\"warn\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\" [$__range]))",
           "refId": "A",
           "legendFormat": "",
           "queryType": "instant"
@@ -325,7 +337,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "count(sum by (service_name) (count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` [$__range])))",
+          "expr": "count(sum by (service_name) (count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\" [$__range])))",
           "refId": "A",
           "legendFormat": "",
           "queryType": "instant"
@@ -378,7 +390,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "sum by (detected_level) (count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` [$__auto]))",
+          "expr": "sum by (detected_level) (count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\" [$__auto]))",
           "refId": "A",
           "legendFormat": "{{detected_level}}",
           "queryType": "range"
@@ -538,7 +550,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "sort_desc(sum by (service_name, deployment_environment_name) (count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` [$__range])))",
+          "expr": "sort_desc(sum by (service_name, deployment_environment_name) (count_over_time({service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\" [$__range])))",
           "refId": "A",
           "legendFormat": "{{service_name}} ({{deployment_environment_name}})",
           "queryType": "instant"
@@ -568,6 +580,39 @@
       }
     },
     {
+      "id": 90,
+      "type": "traces",
+      "title": "Trace",
+      "description": "Paste a trace ID in the box \"Trace ID\" at the top. Then this panel shows the trace from Tempo, and the other panels show only its log lines. Empty box: no trace.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "${traceid}",
+          "limit": 20
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
       "id": 7,
       "type": "logs",
       "title": "Errors and warnings",
@@ -578,7 +623,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 24,
         "w": 24,
         "h": 8
       },
@@ -588,7 +633,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "{service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"error|critical|fatal|warn\" |~ `(?i)${search:regex}`",
+          "expr": "{service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"error|critical|fatal|warn\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\"",
           "refId": "A",
           "legendFormat": "",
           "queryType": "range"
@@ -620,7 +665,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 32,
         "w": 24,
         "h": 20
       },
@@ -630,7 +675,7 @@
             "type": "loki",
             "uid": "${datasource}"
           },
-          "expr": "{service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}`",
+          "expr": "{service_name=~\"$service\", deployment_environment_name=~\"$env\"} | detected_level=~\"$level\" |~ `(?i)${search:regex}` | trace_id=~\"${traceid:regex}.*\"",
           "refId": "A",
           "legendFormat": "",
           "queryType": "range"
