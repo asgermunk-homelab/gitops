@@ -11,3 +11,5 @@ spec:
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: Development
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: deployment.environment.name=dev

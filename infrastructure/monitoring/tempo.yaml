@@ -1,0 +1,40 @@
+# Tempo keeps the traces. The apps send them over OTLP, through Alloy.
+# Single binary mode, the blocks on a local PVC.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tempo
+  namespace: monitoring
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: tempo
+      version: 3.1.0
+      sourceRef:
+        kind: HelmRepository
+        name: grafana-community
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    tempo:
+      retention: 168h
+      reportingEnabled: false
+      # The default receivers stay: the chart templates need them. Alloy uses
+      # only OTLP over HTTP on port 4318.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          memory: 1Gi
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      size: 5Gi
+    serviceMonitor:
+      enabled: true

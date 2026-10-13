@@ -16,3 +16,8 @@ OpenTelemetry settings, a NetworkPolicy, a ResourceQuota), add it here and in
 | `app/image-automation.yaml` | `infrastructure/image-automation/<app>.yaml` |
 
 The app must listen on port 8080 and answer `GET /healthz`, the same as `hello-api`.
+
+**OpenTelemetry.** The base sets `OTEL_EXPORTER_OTLP_ENDPOINT` (Alloy, gRPC 4317) and
+`OTEL_SERVICE_NAME`. Each overlay sets `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=<env>`.
+The app must use the OpenTelemetry .NET SDK with `UseOtlpExporter()`, the same as `hello-api`.
+Then its logs go to Loki, its traces to Tempo, and its metrics to Prometheus.

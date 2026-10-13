@@ -1,0 +1,132 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  interval: 24h
+  url: https://grafana.github.io/helm-charts
+---
+# Alloy is the one OTLP endpoint for the apps, like the connection string of
+# Application Insights. It sends the logs to Loki, the traces to Tempo and the
+# metrics to Prometheus. It does not read the stdout of the pods.
+# The apps use: OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.monitoring.svc.cluster.local:4317
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alloy
+  namespace: monitoring
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: alloy
+      version: 1.13.1
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # One gateway pod, not one pod on each node.
+    controller:
+      type: deployment
+      replicas: 1
+    serviceMonitor:
+      enabled: true
+    # The default rules also read every Secret and ConfigMap in the cluster.
+    # The gateway only needs to find the pod, the namespace and the deployment
+    # (through the ReplicaSet) of a sender.
+    rbac:
+      rules:
+        - apiGroups: [""]
+          resources: ["pods", "namespaces"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: ["apps"]
+          resources: ["replicasets"]
+          verbs: ["get", "list", "watch"]
+      # clusterRules keeps the chart default (read the nodes and /metrics).
+      # An empty list here would break the template.
+    alloy:
+      enableReporting: false
+      extraPorts:
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+          protocol: TCP
+          appProtocol: grpc
+        - name: otlp-http
+          port: 4318
+          targetPort: 4318
+          protocol: TCP
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      configMap:
+        content: |
+          // Receive OTLP from the apps, on gRPC (4317) and HTTP (4318).
+          otelcol.receiver.otlp "apps" {
+            grpc {
+              endpoint = "0.0.0.0:4317"
+            }
+            http {
+              endpoint = "0.0.0.0:4318"
+            }
+            output {
+              metrics = [otelcol.processor.k8sattributes.default.input]
+              logs    = [otelcol.processor.k8sattributes.default.input]
+              traces  = [otelcol.processor.k8sattributes.default.input]
+            }
+          }
+
+          // Add the namespace, the pod and the deployment of the sender.
+          // Alloy finds them by the pod IP of the connection.
+          otelcol.processor.k8sattributes "default" {
+            extract {
+              metadata = [
+                "k8s.namespace.name",
+                "k8s.pod.name",
+                "k8s.deployment.name",
+                "k8s.node.name",
+              ]
+            }
+            output {
+              metrics = [otelcol.processor.batch.default.input]
+              logs    = [otelcol.processor.batch.default.input]
+              traces  = [otelcol.processor.batch.default.input]
+            }
+          }
+
+          otelcol.processor.batch "default" {
+            output {
+              metrics = [otelcol.exporter.otlphttp.prometheus.input]
+              logs    = [otelcol.exporter.otlphttp.loki.input]
+              traces  = [otelcol.exporter.otlphttp.tempo.input]
+            }
+          }
+
+          // The exporter adds /v1/logs, /v1/traces or /v1/metrics to each endpoint.
+          otelcol.exporter.otlphttp "loki" {
+            client {
+              endpoint = "http://loki.monitoring.svc.cluster.local:3100/otlp"
+            }
+          }
+
+          otelcol.exporter.otlphttp "tempo" {
+            client {
+              endpoint = "http://tempo.monitoring.svc.cluster.local:4318"
+            }
+          }
+
+          otelcol.exporter.otlphttp "prometheus" {
+            client {
+              endpoint = "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/otlp"
+            }
+          }
