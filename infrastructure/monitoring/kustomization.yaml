@@ -18,3 +18,11 @@ configMapGenerator:
       disableNameSuffixHash: true
       labels:
         grafana_dashboard: "1"
+  - name: dashboard-homelab-logs
+    namespace: monitoring
+    files:
+      - dashboards/homelab-logs.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
