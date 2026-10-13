@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
         - name: hello-api
-          image: ghcr.io/asgermunk-homelab/hello-api:7-c471b1e5-1791496700-prod # {"$imagepolicy": "flux-system:hello-api-prod"}
+          image: ghcr.io/asgermunk-homelab/hello-api:9-647e478e-1791898778-prod # {"$imagepolicy": "flux-system:hello-api-prod"}
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: Production
