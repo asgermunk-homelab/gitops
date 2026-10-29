@@ -22,7 +22,7 @@ spec:
       retries: 3
   values:
     tempo:
-      retention: 168h
+      retention: 72h
       reportingEnabled: false
       # The default receivers stay: the chart templates need them. Alloy uses
       # only OTLP over HTTP on port 4318.
