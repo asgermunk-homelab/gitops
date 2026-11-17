@@ -1,0 +1,38 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: quiz
+  namespace: quiz
+spec:
+  interval: 1m
+  url: ssh://git@github.com/6-sem-musik-quiz/gitops
+  ref:
+    branch: main
+  secretRef:
+    name: quiz-gitops-deploy-key
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: quiz
+  namespace: quiz
+spec:
+  interval: 10m
+  path: ./
+  prune: true
+  wait: false          # images may not exist yet; do not block on them
+  timeout: 5m
+  targetNamespace: quiz
+  serviceAccountName: quiz-flux   # only the rights of the Roles in rbac.yaml
+  sourceRef:
+    kind: GitRepository
+    name: quiz
+  patches:
+    # Every HelmRelease from the quiz repo installs as quiz-helm.
+    # The admission policy refuses any other value anyway.
+    - target:
+        kind: HelmRelease
+      patch: |
+        - op: add
+          path: /spec/serviceAccountName
+          value: quiz-helm

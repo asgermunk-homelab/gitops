@@ -1,0 +1,78 @@
+# Flux runs without multi-tenancy lockdown: a HelmRelease or Kustomization
+# WITHOUT serviceAccountName is applied as cluster-admin. These policies make
+# the API server refuse that in the namespace quiz, whoever sends the request
+# (the quiz repo, kubectl, or a pod that holds a token).
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: quiz-flux-impersonation
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: quiz
+    resourceRules:
+      - apiGroups: ["helm.toolkit.fluxcd.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["helmreleases"]
+      - apiGroups: ["kustomize.toolkit.fluxcd.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["kustomizations"]
+  validations:
+    - expression: >-
+        object.kind != 'HelmRelease' ||
+        (has(object.spec.serviceAccountName) && object.spec.serviceAccountName == 'quiz-helm')
+      message: "A HelmRelease in quiz must use serviceAccountName: quiz-helm."
+    - expression: >-
+        object.kind != 'Kustomization' ||
+        (has(object.spec.serviceAccountName) && object.spec.serviceAccountName == 'quiz-flux')
+      message: "A Kustomization in quiz must use serviceAccountName: quiz-flux."
+    - expression: "!has(object.spec.kubeConfig)"
+      message: "kubeConfig is not allowed in quiz."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: quiz-flux-impersonation
+spec:
+  policyName: quiz-flux-impersonation
+  validationActions: ["Deny"]
+---
+# The Flux service accounts must never end up inside a pod, and nobody may
+# mint a long-lived token Secret for any account in quiz.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: quiz-protect-flux-accounts
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: quiz
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods", "secrets"]
+  validations:
+    - expression: >-
+        object.kind != 'Pod' ||
+        !has(object.spec.serviceAccountName) ||
+        !(object.spec.serviceAccountName in ['quiz-flux', 'quiz-helm'])
+      message: "Pods in quiz may not run as quiz-flux or quiz-helm."
+    - expression: >-
+        object.kind != 'Secret' ||
+        !has(object.type) || object.type != 'kubernetes.io/service-account-token'
+      message: "Service account token Secrets are not allowed in quiz."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: quiz-protect-flux-accounts
+spec:
+  policyName: quiz-protect-flux-accounts
+  validationActions: ["Deny"]
