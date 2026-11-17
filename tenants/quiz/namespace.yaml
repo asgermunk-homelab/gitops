@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: quiz
+  labels:
+    # baseline blocks privileged pods, hostPath, hostNetwork and hostPID:
+    # the ways out of a container onto the k3s VM.
+    pod-security.kubernetes.io/enforce: baseline
+    # restricted is the goal; warn where we are not there yet.
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

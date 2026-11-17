@@ -1,0 +1,152 @@
+# Three identities in the namespace quiz:
+#   quiz-flux        Flux applies the quiz repo as this account.
+#   quiz-helm        Flux installs the quiz HelmReleases as this account.
+#   quiz-developers  the people (the O= group in their client certificate).
+# None of them gets the built-in "edit" role: in this cluster it includes
+# write access to Flux Kustomizations, which leads straight to cluster-admin.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quiz-flux
+  namespace: quiz
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: quiz-helm
+  namespace: quiz
+automountServiceAccountToken: false
+---
+# What the quiz may run: plain Kubernetes objects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: quiz-deployer
+  namespace: quiz
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, secrets, services, serviceaccounts, persistentvolumeclaims]
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: [pods, pods/log, events, endpoints]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [delete]
+  - apiGroups: ["apps"]
+    resources: [deployments, statefulsets, replicasets]
+    verbs: ["*"]
+  - apiGroups: ["batch"]
+    resources: [jobs, cronjobs]
+    verbs: ["*"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: [ingresses, networkpolicies]
+    verbs: ["*"]
+  - apiGroups: ["policy"]
+    resources: [poddisruptionbudgets]
+    verbs: ["*"]
+  - apiGroups: ["autoscaling"]
+    resources: [horizontalpodautoscalers]
+    verbs: ["*"]
+  - apiGroups: ["external-secrets.io"]
+    resources: [externalsecrets]
+    verbs: ["*"]
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: [servicemonitors, podmonitors]
+    verbs: ["*"]
+---
+# The Flux objects the quiz repo may contain. Not Kustomizations,
+# GitRepositories or SecretStores: those stay in this (homelab) repo.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: quiz-flux-objects
+  namespace: quiz
+rules:
+  - apiGroups: ["helm.toolkit.fluxcd.io"]
+    resources: [helmreleases]
+    verbs: ["*"]
+  - apiGroups: ["source.toolkit.fluxcd.io"]
+    resources: [helmrepositories, ocirepositories, helmcharts]
+    verbs: ["*"]
+  - apiGroups: ["image.toolkit.fluxcd.io"]
+    resources: [imagerepositories, imagepolicies, imageupdateautomations]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: quiz-flux
+  namespace: quiz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: quiz-deployer
+subjects:
+  - kind: ServiceAccount
+    name: quiz-flux
+    namespace: quiz
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: quiz-flux-objects
+  namespace: quiz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: quiz-flux-objects
+subjects:
+  - kind: ServiceAccount
+    name: quiz-flux
+    namespace: quiz
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: quiz-helm
+  namespace: quiz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: quiz-deployer
+subjects:
+  - kind: ServiceAccount
+    name: quiz-helm
+    namespace: quiz
+---
+# The people: read everything, logs, exec, port-forward, and delete pods
+# (to restart them). Changes go through Git, not kubectl.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: quiz-developer
+  namespace: quiz
+rules:
+  - apiGroups: ["", "apps", "batch", "networking.k8s.io", "policy", "autoscaling",
+                "external-secrets.io", "monitoring.coreos.com",
+                "helm.toolkit.fluxcd.io", "source.toolkit.fluxcd.io",
+                "image.toolkit.fluxcd.io", "kustomize.toolkit.fluxcd.io"]
+    resources: ["*"]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/exec, pods/portforward]
+    verbs: [create, get]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: quiz-developers
+  namespace: quiz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: quiz-developer
+subjects:
+  - kind: Group
+    name: quiz-developers
+    apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,63 @@
+# Same pattern as the other namespaces: a service account "openbao" that
+# OpenBao's Kubernetes auth checks (role "quiz", policy: read kv/quiz/*).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: openbao
+  namespace: quiz
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: openbao-auth-quiz
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: openbao
+    namespace: quiz
+---
+apiVersion: external-secrets.io/v1
+kind: SecretStore
+metadata:
+  name: openbao
+  namespace: quiz
+spec:
+  provider:
+    vault:
+      server: https://192.168.0.30:8200
+      path: kv
+      version: v2
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrRENDQVRXZ0F3SUJBZ0lVVGYzY3luVzU5dFFNU3dVdG9vaGp5R0hpUFk4d0NnWUlLb1pJemowRUF3SXcKSFRFYk1Ca0dBMVVFQXd3U2FHOXRaV3hoWWkxdmNHVnVZbUZ2TFdOaE1CNFhEVEkyTVRBd09USXlOREl4TVZvWApEVE0yTVRBd05qSXlOREl4TVZvd0hURWJNQmtHQTFVRUF3d1NhRzl0Wld4aFlpMXZjR1Z1WW1GdkxXTmhNRmt3CkV3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFOUNYaUJqaVRVU2tLaGxpbytnVVI2MTV6WXVnRnZ6ZFMKbHlSM01VVWJCakJmcGRvQmxva29LM21zc0J5TVNHVjcxZ1RNRTNIYVpvU0YrcFRFNGI4Mm82TlRNRkV3SFFZRApWUjBPQkJZRUZCMXpJVnJuWkxDdml3ME5yaVFXK003cnR3c2VNQjhHQTFVZEl3UVlNQmFBRkIxeklWcm5aTEN2Cml3ME5yaVFXK003cnR3c2VNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWgKQVBjVSs1QWJLbGFpOE9jS3BERkFLWUlTNjZIZ3lMcWJpbWsvVjkwZmU0S01BaUVBNzNiVjlyeGtteGVmanhGMwpRaWhTY1RwNDQrZUI0ckkxR0lFK3VucDZ0NzA9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      auth:
+        kubernetes:
+          mountPath: kubernetes
+          role: quiz
+          serviceAccountRef:
+            name: openbao
+            audiences:
+              - openbao
+              - https://kubernetes.default.svc.cluster.local
+              - k3s
+---
+# The read-write deploy key for 6-sem-musik-quiz/gitops (Flux reads the repo,
+# and the image automation pushes tag updates). In OpenBao at
+# kv/quiz/flux-deploy-key with the properties identity, identity.pub, known_hosts.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: quiz-gitops-deploy-key
+  namespace: quiz
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: openbao
+  target:
+    name: quiz-gitops-deploy-key
+  dataFrom:
+    - extract:
+        key: quiz/flux-deploy-key
