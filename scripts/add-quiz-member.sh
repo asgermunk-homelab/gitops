@@ -19,7 +19,7 @@ CSR_FILE="${2:?usage: add-quiz-member.sh <name> <csr-file>}"
 CONTEXT="${CONTEXT:-homelab}"
 EXPIRY_SECONDS="${EXPIRY_SECONDS:-15552000}"   # 180 days: past the exam
 
-[[ "$NAME" =~ ^[a-z][a-z0-9-]{1,30}$ ]] || { echo "Name must be lowercase letters, digits, dashes."; exit 1; }
+[[ "$NAME" =~ ^[A-Za-z][A-Za-z0-9-]{1,30}$ ]] || { echo "Name must be letters, digits, dashes."; exit 1; }
 
 # The group (O=) decides the rights. Accept exactly CN=<name>, O=quiz-developers,
 # so nobody can sneak in O=system:masters (= cluster-admin).
@@ -31,7 +31,7 @@ if [[ "$SUBJECT" != "$EXPECTED" ]]; then
   exit 1
 fi
 
-CSR_NAME="quiz-$NAME"
+CSR_NAME="quiz-${NAME,,}"   # object names must be lowercase
 kubectl --context "$CONTEXT" delete csr "$CSR_NAME" --ignore-not-found
 kubectl --context "$CONTEXT" apply -f - <<EOF
 apiVersion: certificates.k8s.io/v1
