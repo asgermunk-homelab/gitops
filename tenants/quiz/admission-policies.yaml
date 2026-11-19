@@ -76,3 +76,35 @@ metadata:
 spec:
   policyName: quiz-protect-flux-accounts
   validationActions: ["Deny"]
+---
+# A LoadBalancer in quiz must go through the Tailscale operator. ServiceLB
+# would put it on 192.168.0.20 for the whole LAN; a tailnet LB is only
+# reachable over Tailscale. It must also skip node ports (quota is 0).
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: quiz-tailnet-only-loadbalancers
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: quiz
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["services"]
+  validations:
+    - expression: >-
+        object.spec.type != 'LoadBalancer' ||
+        (has(object.spec.loadBalancerClass) && object.spec.loadBalancerClass == 'tailscale')
+      message: "A LoadBalancer in quiz must set loadBalancerClass: tailscale."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: quiz-tailnet-only-loadbalancers
+spec:
+  policyName: quiz-tailnet-only-loadbalancers
+  validationActions: ["Deny"]
