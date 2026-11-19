@@ -13,7 +13,9 @@ spec:
     pods: "30"
     persistentvolumeclaims: "10"
     requests.storage: 30Gi
-    services.loadbalancers: "0"
+    # One Tailscale LoadBalancer: Postgres on the tailnet (quiz-postgres).
+    # Only class tailscale is allowed, see admission-policies.yaml.
+    services.loadbalancers: "1"
     services.nodeports: "0"
 ---
 # Defaults for a container that sets no resources (the quota requires them).
