@@ -34,8 +34,12 @@ spec:
   values:
     deploymentMode: Monolithic
     loki:
-      # One tenant. No X-Scope-OrgID header is necessary.
-      auth_enabled: false
+      # Multi-tenant: the X-Scope-OrgID header is the tenant. Alloy writes the
+      # namespace quiz to tenant "quiz" and the rest to "homelab". Grafana's main
+      # org reads both ("homelab|quiz"), the Quiz org only "quiz".
+      auth_enabled: true
+      querier:
+        multi_tenant_queries_enabled: true
       commonConfig:
         replication_factor: 1
       storage:

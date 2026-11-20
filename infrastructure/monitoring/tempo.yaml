@@ -24,6 +24,9 @@ spec:
     tempo:
       retention: 72h
       reportingEnabled: false
+      # Multi-tenant like Loki: tenants "homelab" and "quiz" (X-Scope-OrgID).
+      # Queries for "homelab|quiz" search both.
+      multitenancyEnabled: true
       # The default receivers stay: the chart templates need them. Alloy uses
       # only OTLP over HTTP on port 4318.
       resources:

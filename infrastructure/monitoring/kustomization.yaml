@@ -7,6 +7,9 @@ resources:
   - loki.yaml
   - tempo.yaml
   - alloy.yaml
+  - quiz-prometheus-proxy.yaml
+  - grafana-tailnet.yaml
+  - network-policies.yaml
 # Own dashboards. The Grafana sidecar loads each ConfigMap with the label
 # grafana_dashboard: "1". Change a dashboard here, not in the UI.
 configMapGenerator:
@@ -26,3 +29,11 @@ configMapGenerator:
       disableNameSuffixHash: true
       labels:
         grafana_dashboard: "1"
+  # The Quiz org's dashboard. No grafana_dashboard label: the sidecar would load
+  # it into the main org. Grafana mounts it itself (dashboardsConfigMaps).
+  - name: dashboard-quiz-overview
+    namespace: monitoring
+    files:
+      - dashboards/quiz-overview.json
+    options:
+      disableNameSuffixHash: true
