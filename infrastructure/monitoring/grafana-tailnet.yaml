@@ -1,0 +1,24 @@
+# Grafana for the quiz team: https://grafana-quiz.tail5a1bc5.ts.net
+# A Tailscale Ingress with its own tag, so the Tailscale ACL can give
+# group:quiz tcp:443 on tag:grafana and nothing else (tag:k8s is the shared
+# Traefik, which also serves Proxmox and OpenBao).
+# The team logs in as "quiz" and only has the Quiz org (namespace quiz).
+# Tailscale admin console: tagOwners tag:grafana = tag:k8s-operator, and the
+# grant group:quiz -> tag:grafana:443.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-tailnet
+  namespace: monitoring
+  annotations:
+    tailscale.com/tags: tag:grafana
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: kube-prometheus-stack-grafana
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - grafana-quiz

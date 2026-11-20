@@ -1,0 +1,20 @@
+# Loki, Tempo and Prometheus have no login: the tenant is just a header.
+# Only pods in this namespace (Grafana, Alloy, the quiz proxy, Prometheus)
+# may talk to them, so a pod in quiz cannot ask Loki for tenant "homelab".
+# The apps send their telemetry to Alloy, which stays open.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: telemetry-backends
+  namespace: monitoring
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [loki, tempo, prometheus, quiz-prometheus-proxy]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
