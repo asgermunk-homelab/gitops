@@ -56,8 +56,11 @@ rules:
     resources: [servicemonitors, podmonitors]
     verbs: ["*"]
 ---
-# The Flux objects the quiz repo may contain. Not Kustomizations,
-# GitRepositories or SecretStores: those stay in this (homelab) repo.
+# The Flux objects the quiz repo may contain. Not Kustomizations or
+# SecretStores: those stay in this (homelab) repo. GitRepositories are allowed
+# (e.g. a Helm chart that only lives in a git repo, like Garage's), but the
+# admission policy quiz-protect-flux-source keeps the quiz repo's own source
+# GitRepository "quiz" and its deploy key out of reach.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -68,7 +71,7 @@ rules:
     resources: [helmreleases]
     verbs: ["*"]
   - apiGroups: ["source.toolkit.fluxcd.io"]
-    resources: [helmrepositories, ocirepositories, helmcharts]
+    resources: [helmrepositories, ocirepositories, helmcharts, gitrepositories]
     verbs: ["*"]
   - apiGroups: ["image.toolkit.fluxcd.io"]
     resources: [imagerepositories, imagepolicies, imageupdateautomations]

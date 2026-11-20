@@ -108,3 +108,41 @@ metadata:
 spec:
   policyName: quiz-tailnet-only-loadbalancers
   validationActions: ["Deny"]
+---
+# quiz-flux may create GitRepositories (rbac.yaml), but not change or delete
+# "quiz", the source this repo's own Kustomization syncs from, and not use its
+# deploy key (which has write access to 6-sem-musik-quiz/gitops).
+# Only quiz-flux is matched, so "flux reconcile source git quiz" still works.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: quiz-protect-flux-source
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: quiz
+    resourceRules:
+      - apiGroups: ["source.toolkit.fluxcd.io"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["gitrepositories"]
+  matchConditions:
+    - name: only-quiz-flux
+      expression: "request.userInfo.username == 'system:serviceaccount:quiz:quiz-flux'"
+  validations:
+    - expression: "request.name != 'quiz'"
+      message: "The GitRepository quiz is managed by the homelab repo, not the quiz repo."
+    - expression: >-
+        request.operation == 'DELETE' ||
+        !has(object.spec.secretRef) || object.spec.secretRef.name != 'quiz-gitops-deploy-key'
+      message: "GitRepositories from the quiz repo may not use the deploy key quiz-gitops-deploy-key."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: quiz-protect-flux-source
+spec:
+  policyName: quiz-protect-flux-source
+  validationActions: ["Deny"]
