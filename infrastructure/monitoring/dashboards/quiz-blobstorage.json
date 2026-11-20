@@ -59,19 +59,14 @@
             "method": "POST",
             "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){total:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes}} hits:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count}}}}"
           },
-          "root_selector": "{\"requests\": $sum(data.viewer.zones.total.count), \"bytes\": $sum(data.viewer.zones.total.sum.edgeResponseBytes), \"hitRatio\": $sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : null}",
-          "columns": [
-            {
-              "selector": "requests",
-              "text": "CDN requests",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$sum(data.viewer.zones.total.count)",
+          "columns": []
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "displayName": "CDN requests"
         }
       },
       "options": {
@@ -114,14 +109,8 @@
             "method": "POST",
             "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){total:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes}} hits:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count}}}}"
           },
-          "root_selector": "{\"requests\": $sum(data.viewer.zones.total.count), \"bytes\": $sum(data.viewer.zones.total.sum.edgeResponseBytes), \"hitRatio\": $sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : null}",
-          "columns": [
-            {
-              "selector": "hitRatio",
-              "text": "Cache hit ratio",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : 0",
+          "columns": []
         }
       ],
       "fieldConfig": {
@@ -143,7 +132,8 @@
                 "value": 0.8
               }
             ]
-          }
+          },
+          "displayName": "Cache hit ratio"
         }
       },
       "options": {
@@ -186,19 +176,14 @@
             "method": "POST",
             "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){total:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes}} hits:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count}}}}"
           },
-          "root_selector": "{\"requests\": $sum(data.viewer.zones.total.count), \"bytes\": $sum(data.viewer.zones.total.sum.edgeResponseBytes), \"hitRatio\": $sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : null}",
-          "columns": [
-            {
-              "selector": "bytes",
-              "text": "Data served by the CDN",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$sum(data.viewer.zones.total.sum.edgeResponseBytes)",
+          "columns": []
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "bytes",
+          "displayName": "Data served by the CDN"
         }
       },
       "options": {
