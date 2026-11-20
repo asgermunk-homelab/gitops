@@ -140,6 +140,18 @@ spec:
           memory: 128Mi
 
     grafana:
+      # Infinity: a data source for HTTP/GraphQL APIs. The Quiz org uses it for
+      # Cloudflare's analytics API (CDN panels, SCRUM-125).
+      plugins:
+        - yesoreyeram-infinity-datasource@4.1.6
+      # The Cloudflare token for that data source (openbao.yaml). Optional, so
+      # Grafana still starts if the token is missing; the CDN panels then fail.
+      envValueFrom:
+        CF_ANALYTICS_TOKEN:
+          secretKeyRef:
+            name: cloudflare-analytics
+            key: api-token
+            optional: true
       # The Secret comes from OpenBao (openbao.yaml).
       admin:
         existingSecret: grafana-admin
@@ -256,6 +268,19 @@ spec:
               datasourceUid: quiz-loki
             nodeGraph:
               enabled: true
+        # Cloudflare analytics for media.munkcloud.dk (the CDN in front of Garage).
+        # The token can only read analytics of the zone munkcloud.dk, and the data
+        # source may only call api.cloudflare.com.
+        - name: Cloudflare
+          uid: quiz-cloudflare
+          orgId: 2
+          type: yesoreyeram-infinity-datasource
+          jsonData:
+            auth_method: bearerToken
+            allowedHosts:
+              - https://api.cloudflare.com
+          secureJsonData:
+            bearerToken: ${CF_ANALYTICS_TOKEN}
       # The dashboards of the Quiz org. The sidecar can only load into org 1,
       # so these use a normal provider. The ConfigMap is in kustomization.yaml.
       dashboardProviders:

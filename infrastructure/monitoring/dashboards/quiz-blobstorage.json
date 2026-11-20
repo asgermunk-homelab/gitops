@@ -1,7 +1,7 @@
 {
   "uid": "quiz-blobstorage",
   "title": "Slopster BlobStorage",
-  "description": "Garage (S3) behind Cloudflare CDN, namespace quiz. Origin requests are the CDN's cache misses. SCRUM-124.",
+  "description": "Cloudflare CDN in front of Garage (S3), namespace quiz. CDN panels come from Cloudflare's analytics API (SCRUM-125); origin requests are the CDN's cache misses (SCRUM-124).",
   "tags": [
     "quiz",
     "blobstorage"
@@ -10,11 +10,379 @@
   "schemaVersion": 41,
   "refresh": "30s",
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "editable": false,
   "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Cloudflare CDN (media.munkcloud.dk)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "CDN requests",
+      "description": "All requests to media.munkcloud.dk in the selected time range (Cloudflare analytics).",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "quiz-cloudflare"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "quiz-cloudflare"
+          },
+          "type": "graphql",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "https://api.cloudflare.com/client/v4/graphql",
+          "url_options": {
+            "method": "POST",
+            "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){total:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes}} hits:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count}}}}"
+          },
+          "root_selector": "{\"requests\": $sum(data.viewer.zones.total.count), \"bytes\": $sum(data.viewer.zones.total.sum.edgeResponseBytes), \"hitRatio\": $sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : null}",
+          "columns": [
+            {
+              "selector": "requests",
+              "text": "CDN requests",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "Cache hit ratio",
+      "description": "Share served from Cloudflare's cache. The rest went to Garage (origin).",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "quiz-cloudflare"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "quiz-cloudflare"
+          },
+          "type": "graphql",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "https://api.cloudflare.com/client/v4/graphql",
+          "url_options": {
+            "method": "POST",
+            "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){total:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes}} hits:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count}}}}"
+          },
+          "root_selector": "{\"requests\": $sum(data.viewer.zones.total.count), \"bytes\": $sum(data.viewer.zones.total.sum.edgeResponseBytes), \"hitRatio\": $sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : null}",
+          "columns": [
+            {
+              "selector": "hitRatio",
+              "text": "Cache hit ratio",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Data served by the CDN",
+      "description": "Bytes Cloudflare sent to players.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "quiz-cloudflare"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "quiz-cloudflare"
+          },
+          "type": "graphql",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "https://api.cloudflare.com/client/v4/graphql",
+          "url_options": {
+            "method": "POST",
+            "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){total:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes}} hits:httpRequestsAdaptiveGroups(limit:1,filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count}}}}"
+          },
+          "root_selector": "{\"requests\": $sum(data.viewer.zones.total.count), \"bytes\": $sum(data.viewer.zones.total.sum.edgeResponseBytes), \"hitRatio\": $sum(data.viewer.zones.total.count) > 0 ? $sum(data.viewer.zones.hits.count) / $sum(data.viewer.zones.total.count) : null}",
+          "columns": [
+            {
+              "selector": "bytes",
+              "text": "Data served by the CDN",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        }
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 104,
+      "type": "timeseries",
+      "title": "CDN requests per 15 min: cache hit vs. to origin",
+      "description": "Hits never reach Garage. Compare with 'Origin (web) requests/s' below.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "quiz-cloudflare"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "quiz-cloudflare"
+          },
+          "type": "graphql",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "https://api.cloudflare.com/client/v4/graphql",
+          "url_options": {
+            "method": "POST",
+            "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){httpRequestsAdaptiveGroups(limit:10000,orderBy:[datetimeFifteenMinutes_ASC],filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus:\"hit\"}){count dimensions{datetimeFifteenMinutes}}}}}"
+          },
+          "root_selector": "data.viewer.zones.httpRequestsAdaptiveGroups",
+          "columns": [
+            {
+              "selector": "dimensions.datetimeFifteenMinutes",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "count",
+              "text": "Cache hit",
+              "type": "number"
+            }
+          ]
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "quiz-cloudflare"
+          },
+          "type": "graphql",
+          "source": "url",
+          "parser": "backend",
+          "format": "timeseries",
+          "url": "https://api.cloudflare.com/client/v4/graphql",
+          "url_options": {
+            "method": "POST",
+            "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){httpRequestsAdaptiveGroups(limit:10000,orderBy:[datetimeFifteenMinutes_ASC],filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\",cacheStatus_neq:\"hit\"}){count dimensions{datetimeFifteenMinutes}}}}}"
+          },
+          "root_selector": "data.viewer.zones.httpRequestsAdaptiveGroups",
+          "columns": [
+            {
+              "selector": "dimensions.datetimeFifteenMinutes",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "count",
+              "text": "Miss / not cached",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 105,
+      "type": "table",
+      "title": "By cache status and HTTP status",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "quiz-cloudflare"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "quiz-cloudflare"
+          },
+          "type": "graphql",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "https://api.cloudflare.com/client/v4/graphql",
+          "url_options": {
+            "method": "POST",
+            "data": "{viewer{zones(filter:{zoneTag:\"1d7b4f0197be386cf3d8b427f63789aa\"}){httpRequestsAdaptiveGroups(limit:100,orderBy:[count_DESC],filter:{clientRequestHTTPHost:\"media.munkcloud.dk\",datetime_geq:\"${__from:date:iso}\",datetime_leq:\"${__to:date:iso}\"}){count sum{edgeResponseBytes} dimensions{cacheStatus edgeResponseStatus}}}}}"
+          },
+          "root_selector": "data.viewer.zones.httpRequestsAdaptiveGroups",
+          "columns": [
+            {
+              "selector": "dimensions.cacheStatus",
+              "text": "Cache",
+              "type": "string"
+            },
+            {
+              "selector": "dimensions.edgeResponseStatus",
+              "text": "HTTP",
+              "type": "number"
+            },
+            {
+              "selector": "count",
+              "text": "Requests",
+              "type": "number"
+            },
+            {
+              "selector": "sum.edgeResponseBytes",
+              "text": "Bytes",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bytes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
     {
       "id": 1,
       "type": "row",
@@ -24,7 +392,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 13
       },
       "panels": []
     },
@@ -41,7 +409,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 1
+        "y": 14
       },
       "targets": [
         {
@@ -103,7 +471,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 1
+        "y": 14
       },
       "targets": [
         {
@@ -138,7 +506,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 1
+        "y": 14
       },
       "targets": [
         {
@@ -173,7 +541,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 1
+        "y": 14
       },
       "targets": [
         {
@@ -221,7 +589,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 18
       },
       "panels": []
     },
@@ -238,7 +606,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 19
       },
       "targets": [
         {
@@ -278,7 +646,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 6
+        "y": 19
       },
       "targets": [
         {
@@ -323,7 +691,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 27
       },
       "targets": [
         {
@@ -363,7 +731,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 14
+        "y": 27
       },
       "targets": [
         {
@@ -403,7 +771,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 35
       },
       "targets": [
         {
@@ -443,7 +811,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 35
       },
       "targets": [
         {

@@ -72,3 +72,25 @@ spec:
       remoteRef:
         key: monitoring/grafana
         property: admin-password
+---
+# Cloudflare API token for the Quiz org's CDN panels (SCRUM-125): only
+# "Zone Analytics: Read" on munkcloud.dk. In OpenBao: kv/monitoring/cloudflare-analytics.
+# Grafana reads it as CF_ANALYTICS_TOKEN (release.yaml).
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cloudflare-analytics
+  namespace: monitoring
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: SecretStore
+    name: openbao
+  target:
+    name: cloudflare-analytics
+    creationPolicy: Owner
+  data:
+    - secretKey: api-token
+      remoteRef:
+        key: monitoring/cloudflare-analytics
+        property: api-key
