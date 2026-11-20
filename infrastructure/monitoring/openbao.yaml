@@ -93,4 +93,4 @@ spec:
     - secretKey: api-token
       remoteRef:
         key: monitoring/cloudflare-analytics
-        property: api-token
+        property: api-key
