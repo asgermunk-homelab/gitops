@@ -35,5 +35,6 @@ configMapGenerator:
     namespace: monitoring
     files:
       - dashboards/quiz-overview.json
+      - dashboards/quiz-blobstorage.json
     options:
       disableNameSuffixHash: true
