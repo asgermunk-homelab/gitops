@@ -1,0 +1,555 @@
+{
+ "uid": "quiz-lobbies",
+ "title": "Slopster Lobbies",
+ "description": "LobbyService (SCRUM-118): active lobbies by status, how often lookups in the lobby cache (Redis) find something, and response times per endpoint. Metrics come over OTLP from meter Slopster.Lobby.",
+ "tags": [
+  "quiz",
+  "lobbyservice"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 41,
+ "refresh": "30s",
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "editable": false,
+ "templating": {
+  "list": []
+ },
+ "links": [
+  {
+   "title": "Quiz overview",
+   "type": "link",
+   "url": "/d/quiz-overview",
+   "icon": "dashboard"
+  }
+ ],
+ "panels": [
+  {
+   "id": 1,
+   "type": "row",
+   "title": "Lobbies",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Waiting",
+   "description": "Lobbies that are open and waiting for players (public and private). Updated every 20 s.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 0,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max(slopster_lobbies_active{status=\"waiting\"})",
+     "legendFormat": "waiting",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "In game",
+   "description": "Started lobbies. A lobby counts here until its key expires, 10 minutes after the start.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 6,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max(slopster_lobbies_active{status=\"in_game\"})",
+     "legendFormat": "in_game",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "purple",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Cache hit ratio (5m)",
+   "description": "Share of lookups in LobbyCacheRepository (lobby by id, by code, by user) that found a key. A miss is often expected, e.g. 'is this user already in a lobby?' before creating one.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 12,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(slopster_lobby_cache_lookups_total{result=\"hit\"}[5m])) / sum(rate(slopster_lobby_cache_lookups_total[5m]))",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "decimals": 1,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.5
+       },
+       {
+        "color": "green",
+        "value": 0.8
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Lookups /s",
+   "description": "Lookups in the lobby cache per second (hit + miss).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 18,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(slopster_lobby_cache_lookups_total[5m]))",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps",
+     "decimals": 2,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 6,
+   "type": "timeseries",
+   "title": "Active lobbies by status",
+   "description": "slopster_lobbies_active, stacked: waiting + in game.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (status) (slopster_lobbies_active)",
+     "legendFormat": "{{status}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     },
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 7,
+   "type": "timeseries",
+   "title": "Cache lookups /s by result",
+   "description": "slopster_lobby_cache_lookups_total split into hit and miss.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (result) (rate(slopster_lobby_cache_lookups_total[$__rate_interval]))",
+     "legendFormat": "{{result}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Cache hit ratio",
+   "description": "Hits divided by all lookups.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 24,
+    "x": 0,
+    "y": 14
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(slopster_lobby_cache_lookups_total{result=\"hit\"}[$__rate_interval])) / sum(rate(slopster_lobby_cache_lookups_total[$__rate_interval]))",
+     "legendFormat": "hit ratio"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0,
+     "max": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "type": "row",
+   "title": "Endpoints (LobbyService)",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 20
+   },
+   "panels": []
+  },
+  {
+   "id": 10,
+   "type": "timeseries",
+   "title": "p95 response time per endpoint",
+   "description": "From ASP.NET Core's http.server.request.duration (OpenTelemetry). One line per route.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 21
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{k8s_deployment_name=\"lobbyservice\"}[$__rate_interval])))",
+     "legendFormat": "{{http_route}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "Requests /s per endpoint",
+   "description": "Requests per route and status code.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 21
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_duration_seconds_count{k8s_deployment_name=\"lobbyservice\"}[$__rate_interval]))",
+     "legendFormat": "{{http_route}} {{http_response_status_code}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  }
+ ]
+}
