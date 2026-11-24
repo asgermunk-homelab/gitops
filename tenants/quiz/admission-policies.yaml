@@ -79,7 +79,8 @@ spec:
 ---
 # A LoadBalancer in quiz must go through the Tailscale operator. ServiceLB
 # would put it on 192.168.0.20 for the whole LAN; a tailnet LB is only
-# reachable over Tailscale. It must also skip node ports (quota is 0).
+# reachable over Tailscale. Node ports would also open the service on the LAN,
+# so NodePort services are refused and a LoadBalancer must skip node ports.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -100,6 +101,12 @@ spec:
         object.spec.type != 'LoadBalancer' ||
         (has(object.spec.loadBalancerClass) && object.spec.loadBalancerClass == 'tailscale')
       message: "A LoadBalancer in quiz must set loadBalancerClass: tailscale."
+    - expression: "object.spec.type != 'NodePort'"
+      message: "NodePort services are not allowed in quiz."
+    - expression: >-
+        object.spec.type != 'LoadBalancer' ||
+        (has(object.spec.allocateLoadBalancerNodePorts) && object.spec.allocateLoadBalancerNodePorts == false)
+      message: "A LoadBalancer in quiz must set allocateLoadBalancerNodePorts: false."
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

@@ -4,7 +4,7 @@ The quiz tenant consists of these files:
 
 ```
 clusters/homelab/quiz.yaml      Flux Kustomization quiz-tenant (cluster-admin)
-tenants/quiz/                   namespace, guardrails, admission policies,
+tenants/quiz/                   namespace, admission policies,
                                 RBAC, SecretStore, deploy key, the quiz Kustomization
 scripts/add-quiz-member.sh      kubeconfig for one person
 ```
