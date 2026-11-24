@@ -1,0 +1,397 @@
+{
+  "uid": "quiz-autoscaling",
+  "title": "Slopster Autoscaling",
+  "description": "HorizontalPodAutoscaler for the stateless services in namespace quiz (SCRUM-126): pods per service and their CPU/memory, so a load test shows the scale-out and scale-in.",
+  "tags": [
+    "quiz",
+    "autoscaling"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "editable": false,
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Service",
+        "type": "custom",
+        "query": "edgeservice,frontend,userservice,musicservice,statisticservice",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all",
+            "selected": true
+          },
+          {
+            "text": "edgeservice",
+            "value": "edgeservice",
+            "selected": false
+          },
+          {
+            "text": "frontend",
+            "value": "frontend",
+            "selected": false
+          },
+          {
+            "text": "userservice",
+            "value": "userservice",
+            "selected": false
+          },
+          {
+            "text": "musicservice",
+            "value": "musicservice",
+            "selected": false
+          },
+          {
+            "text": "statisticservice",
+            "value": "statisticservice",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Pods per service (HPA)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Pods now / max",
+      "description": "Pods the HPA runs now for each service. Turns orange above the minimum (2), red at the maximum.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "quiz-prometheus"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"}",
+          "legendFormat": "{{horizontalpodautoscaler}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 3
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Pods per service",
+      "description": "Ready pods (solid) and the number the HPA wants (dashed). A step up during a load test is the scale-out; the step down comes about 2 minutes after the load stops.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "quiz-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "expr": "kube_deployment_status_replicas_available{namespace=\"quiz\", deployment=~\"${service:regex}\"}",
+          "legendFormat": "{{deployment}} ready"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"}",
+          "legendFormat": "{{horizontalpodautoscaler}} desired"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "decimals": 0,
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "CPU in % of request (what the HPA sees)",
+      "description": "Average CPU use of the pods of a service in percent of their CPU request. Above the red line (70 %) the HPA adds pods.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "quiz-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "expr": "100 * sum by (deployment) (label_replace(rate(container_cpu_usage_seconds_total{namespace=\"quiz\", container!=\"\", pod=~\"${service:regex}-[a-z0-9]+-[a-z0-9]+\"}[1m]), \"deployment\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\")) / sum by (deployment) (label_replace(kube_pod_container_resource_requests{namespace=\"quiz\", resource=\"cpu\", pod=~\"${service:regex}-[a-z0-9]+-[a-z0-9]+\"}, \"deployment\", \"$1\", \"pod\", \"^(.*)-[a-z0-9]+-[a-z0-9]+$\"))",
+          "legendFormat": "{{deployment}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Usage per pod",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "CPU per pod",
+      "description": "CPU used by each pod (cores). New pods appear as new lines when the service scales out.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "quiz-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"quiz\", container!=\"\", pod=~\"${service:regex}-[a-z0-9]+-[a-z0-9]+\"}[1m]))",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cores",
+          "custom": {
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Memory per pod",
+      "description": "Working set memory of each pod.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "quiz-prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"quiz\", container!=\"\", pod=~\"${service:regex}-[a-z0-9]+-[a-z0-9]+\"})",
+          "legendFormat": "{{pod}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineInterpolation": "linear",
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    }
+  ]
+}

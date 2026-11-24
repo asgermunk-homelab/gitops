@@ -36,5 +36,6 @@ configMapGenerator:
     files:
       - dashboards/quiz-overview.json
       - dashboards/quiz-blobstorage.json
+      - dashboards/quiz-autoscaling.json
     options:
       disableNameSuffixHash: true
