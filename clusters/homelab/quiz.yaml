@@ -1,5 +1,5 @@
 # The music quiz exam project (tenant). Two layers:
-#   quiz-tenant (this file, runs as cluster-admin): the namespace, guardrails,
+#   quiz-tenant (this file, runs as cluster-admin): the namespace, admission policies,
 #       RBAC, SecretStore, and the Flux objects that watch the quiz repo.
 #   quiz (in tenants/quiz/flux.yaml, runs as quiz-flux): the quiz team's own
 #       repo 6-sem-musik-quiz/gitops, which can only touch the namespace quiz.
