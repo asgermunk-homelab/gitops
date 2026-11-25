@@ -1,0 +1,882 @@
+{
+ "uid": "quiz-rabbitmq",
+ "title": "Slopster RabbitMQ",
+ "description": "RabbitMQ (SCRUM-192): GameFinished messages from GameService to StatisticService - published, dropped because no queue was bound, delivered and acked - plus queue depth, consumers and broker health. Scraped from the rabbitmq_prometheus plugin (port 15692) by a ServiceMonitor in the quiz gitops.",
+ "tags": [
+  "quiz",
+  "rabbitmq"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 41,
+ "refresh": "30s",
+ "time": {
+  "from": "now-24h",
+  "to": "now"
+ },
+ "editable": false,
+ "templating": {
+  "list": []
+ },
+ "links": [
+  {
+   "title": "Quiz overview",
+   "type": "link",
+   "url": "/d/quiz-overview",
+   "icon": "dashboard"
+  }
+ ],
+ "panels": [
+  {
+   "id": 1,
+   "type": "row",
+   "title": "Game results (GameService → StatisticService)",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "type": "stat",
+   "title": "Published",
+   "description": "GameFinished messages GameService published in the selected time range (all exchanges).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 0,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(increase(rabbitmq_global_messages_received_total{protocol=\"amqp091\"}[$__range]))",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Dropped (unroutable)",
+   "description": "Messages no queue was bound for, so RabbitMQ threw them away. Should be 0: anything here is a game result that never reached the statistics (e.g. StatisticService's queue missing).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 4,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(increase(rabbitmq_global_messages_unroutable_dropped_total{protocol=\"amqp091\"}[$__range]))",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Delivered to StatisticService",
+   "description": "Messages handed to a consumer in the selected time range.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 8,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(increase(rabbitmq_global_messages_delivered_total{protocol=\"amqp091\"}[$__range]))",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 5,
+   "type": "stat",
+   "title": "Waiting in queue",
+   "description": "Messages in statisticservice.game-finished that are ready or delivered but not acked yet. Stays near 0 when StatisticService keeps up.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 12,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_detailed_queue_messages{queue=\"statisticservice.game-finished\"})",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 10
+       },
+       {
+        "color": "red",
+        "value": 100
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 6,
+   "type": "stat",
+   "title": "Consumers",
+   "description": "StatisticService pods reading statisticservice.game-finished. 0 means results pile up in the queue (or the queue is gone).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 16,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_detailed_queue_consumers{queue=\"statisticservice.game-finished\"})",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "noValue": "no queue",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 7,
+   "type": "stat",
+   "title": "Connections",
+   "description": "Open AMQP connections (GameService's publisher + one per StatisticService pod).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 20,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_connections)",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 8,
+   "type": "timeseries",
+   "title": "Messages /min",
+   "description": "Published (received by RabbitMQ), routed to a queue, dropped as unroutable, delivered to a consumer, and acked after saving. Published = routed + dropped; delivered ≈ acked when everything is saved.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(rabbitmq_global_messages_received_total{protocol=\"amqp091\"}[$__rate_interval])) * 60",
+     "legendFormat": "published"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(rabbitmq_global_messages_routed_total{protocol=\"amqp091\"}[$__rate_interval])) * 60",
+     "legendFormat": "routed"
+    },
+    {
+     "refId": "C",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(rabbitmq_global_messages_unroutable_dropped_total{protocol=\"amqp091\"}[$__rate_interval])) * 60",
+     "legendFormat": "dropped"
+    },
+    {
+     "refId": "D",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(rabbitmq_global_messages_delivered_total{protocol=\"amqp091\"}[$__rate_interval])) * 60",
+     "legendFormat": "delivered"
+    },
+    {
+     "refId": "E",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rate(rabbitmq_global_messages_acknowledged_total{protocol=\"amqp091\"}[$__rate_interval])) * 60",
+     "legendFormat": "acked"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0,
+     "decimals": 2
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "dropped"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "acked"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "published"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "blue"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 9,
+   "type": "timeseries",
+   "title": "Messages per queue",
+   "description": "Ready (waiting for a consumer) and unacked (delivered, being saved) per queue.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_ready)",
+     "legendFormat": "{{queue}} ready"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_unacked)",
+     "legendFormat": "{{queue}} unacked"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     },
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 10,
+   "type": "row",
+   "title": "Consumers",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 14
+   },
+   "panels": []
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "Consumers per queue",
+   "description": "Should match the number of StatisticService pods (2-5 with autoscaling).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 15
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (queue) (rabbitmq_detailed_queue_consumers)",
+     "legendFormat": "{{queue}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "type": "timeseries",
+   "title": "Connections and channels",
+   "description": "Each service opens one connection with one channel.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 15
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_connections)",
+     "legendFormat": "connections"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_channels)",
+     "legendFormat": "channels"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "type": "row",
+   "title": "Broker (rabbitmq-0)",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 22
+   },
+   "panels": []
+  },
+  {
+   "id": 14,
+   "type": "timeseries",
+   "title": "Memory",
+   "description": "Resident memory of the RabbitMQ process. The dashed line is the pod's memory limit (512 MiB in gitops infrastructure/rabbitmq.yaml); above it the pod is OOM-killed.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_process_resident_memory_bytes)",
+     "legendFormat": "resident"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never",
+      "thresholdsStyle": {
+       "mode": "dashed"
+      }
+     },
+     "min": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 536870912
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  },
+  {
+   "id": 15,
+   "type": "timeseries",
+   "title": "Free disk",
+   "description": "Free space on the data volume. RabbitMQ blocks publishers below the dashed line (its free-disk limit).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_disk_space_available_bytes)",
+     "legendFormat": "free"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(rabbitmq_disk_space_available_limit_bytes)",
+     "legendFormat": "limit"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "custom": {
+      "lineInterpolation": "smooth",
+      "fillOpacity": 15,
+      "showPoints": "never"
+     },
+     "min": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "limit"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   }
+  }
+ ]
+}
