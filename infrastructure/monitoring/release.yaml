@@ -231,6 +231,11 @@ spec:
           url: http://quiz-prometheus-proxy.monitoring.svc.cluster.local:8080
           jsonData:
             prometheusType: Prometheus
+            # The apps push OTLP metrics every 60 s (the .NET SDK default), so a series
+            # gets one sample a minute. With Grafana's default 15 s, $__rate_interval is
+            # 1m and rate() over it has a single sample and returns nothing. 60s makes
+            # $__rate_interval at least 4m (4 samples).
+            timeInterval: 60s
         - name: Loki
           uid: quiz-loki
           orgId: 2
