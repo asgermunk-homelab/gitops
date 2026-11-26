@@ -1,7 +1,7 @@
 {
  "uid": "quiz-games",
  "title": "Slopster Games",
- "description": "GameService (SCRUM-119): games being played, games and rounds played, answers by result, and response times per endpoint. Metrics come over OTLP from meter Slopster.Game.",
+ "description": "GameService (SCRUM-119): games being played, games and rounds played, answers by result, and response times per endpoint. Metrics come over OTLP from meter Slopster.Game, and open game connections (SignalR).",
  "tags": [
   "quiz",
   "gameservice"
@@ -473,7 +473,7 @@
    "id": 11,
    "type": "timeseries",
    "title": "p95 response time per endpoint",
-   "description": "ASP.NET Core http.server.request.duration. The SignalR hub (/hubs/game) is a long-lived connection, so its times are how long a connection stayed open.",
+   "description": "ASP.NET Core http.server.request.duration for request/response endpoints. The SignalR hub (/hubs/game) is left out: its 'request' is a WebSocket that stays open for the whole game, so its duration is the connection's lifetime (and stops at the histogram's 10 s top bucket). Game connections are in the row below.",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -491,7 +491,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{k8s_deployment_name=\"gameservice\"}[$__rate_interval])))",
+     "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{k8s_deployment_name=\"gameservice\",http_route!~\".*/hubs/.*\"}[$__rate_interval])))",
      "legendFormat": "{{http_route}}"
     }
    ],
@@ -520,7 +520,7 @@
    "id": 12,
    "type": "timeseries",
    "title": "Requests /s per endpoint",
-   "description": "Requests per second by route and status code.",
+   "description": "Requests per second by route and status code, without the SignalR hub (its WebSockets are counted in the row below).",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -538,7 +538,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_duration_seconds_count{k8s_deployment_name=\"gameservice\"}[$__rate_interval]))",
+     "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_duration_seconds_count{k8s_deployment_name=\"gameservice\",http_route!~\".*/hubs/.*\"}[$__rate_interval]))",
      "legendFormat": "{{http_route}} {{http_response_status_code}}"
     }
    ],
@@ -548,6 +548,181 @@
      "min": 0,
      "custom": {
       "fillOpacity": 15,
+      "showPoints": "never"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "type": "row",
+   "title": "Game connections (SignalR)",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 31
+   },
+   "panels": []
+  },
+  {
+   "id": 14,
+   "type": "stat",
+   "title": "Open game connections",
+   "description": "Players connected to the game hub right now (WebSockets), all GameService pods (signalr.server.active_connections).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 6,
+    "x": 0,
+    "y": 32
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum(signalr_server_active_connections{k8s_deployment_name=\"gameservice\"})",
+     "legendFormat": "",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none",
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 15,
+   "type": "timeseries",
+   "title": "Game connections per pod",
+   "description": "Open game-hub connections on each GameService pod. The games are in Redis (ADR-0004), so a player's connection can be on any pod; this shows how they spread.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 10,
+    "x": 6,
+    "y": 32
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (k8s_pod_name) (signalr_server_active_connections{k8s_deployment_name=\"gameservice\"})",
+     "legendFormat": "{{k8s_pod_name}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "decimals": 0,
+     "custom": {
+      "fillOpacity": 15,
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal",
+       "group": "A"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 16,
+   "type": "timeseries",
+   "title": "How long players stay connected",
+   "description": "Median and p95 length of closed game-hub connections (signalr.server.connection.duration), i.e. roughly how long a player is in a game.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 32
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "histogram_quantile(0.5, sum by (le) (rate(signalr_server_connection_duration_seconds_bucket{k8s_deployment_name=\"gameservice\"}[$__rate_interval])))",
+     "legendFormat": "median"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(signalr_server_connection_duration_seconds_bucket{k8s_deployment_name=\"gameservice\"}[$__rate_interval])))",
+     "legendFormat": "p95"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10,
       "showPoints": "never"
      }
     },
