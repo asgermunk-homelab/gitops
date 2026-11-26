@@ -1,7 +1,7 @@
 {
  "uid": "quiz-rabbitmq",
  "title": "Slopster RabbitMQ",
- "description": "RabbitMQ (SCRUM-192): GameFinished messages from GameService to StatisticService - published, dropped because no queue was bound, delivered and acked - plus queue depth, consumers and broker health. Scraped from the rabbitmq_prometheus plugin (port 15692) by a ServiceMonitor in the quiz gitops.",
+ "description": "RabbitMQ (SCRUM-192): GameFinished messages from GameService to StatisticService and LobbyService - published, dropped because no queue was bound, delivered and acked - plus the queues now, consumers and broker health. Scraped from the rabbitmq_prometheus plugin (port 15692) by a ServiceMonitor in the quiz gitops.",
  "tags": [
   "quiz",
   "rabbitmq"
@@ -29,7 +29,7 @@
   {
    "id": 1,
    "type": "row",
-   "title": "Game results (GameService → StatisticService)",
+   "title": "GameFinished (GameService → StatisticService and LobbyService)",
    "collapsed": false,
    "gridPos": {
     "h": 1,
@@ -156,8 +156,8 @@
   {
    "id": 4,
    "type": "stat",
-   "title": "Delivered to StatisticService",
-   "description": "Messages handed to a consumer in the selected time range.",
+   "title": "Delivered to consumers",
+   "description": "Messages RabbitMQ handed to a consumer in the time range. Each GameFinished goes to two queues (StatisticService and LobbyService), so this is about twice \"Published\".",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -523,9 +523,9 @@
   },
   {
    "id": 9,
-   "type": "timeseries",
-   "title": "Messages per queue",
-   "description": "Ready (waiting for a consumer) and unacked (delivered, being saved) per queue.",
+   "type": "table",
+   "title": "Queues now",
+   "description": "Each consumer's queue right now. The consumers ack within milliseconds, so Ready and Unacked are normally 0: a number that stays above 0 means a consumer is down or failing. (The queue depth over time was always 0, so it is a table now.)",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -539,53 +539,82 @@
    "targets": [
     {
      "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_ready)",
-     "legendFormat": "{{queue}} ready"
+     "expr": "sum by (queue) (rabbitmq_detailed_queue_consumers)",
+     "instant": true,
+     "format": "table"
     },
     {
      "refId": "B",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
+     "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_ready)",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "refId": "C",
      "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_unacked)",
-     "legendFormat": "{{queue}} unacked"
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "queue": "Queue",
+       "Value #A": "Consumers",
+       "Value #B": "Ready",
+       "Value #C": "Unacked"
+      }
+     }
     }
    ],
    "fieldConfig": {
     "defaults": {
-     "unit": "short",
-     "custom": {
-      "lineInterpolation": "smooth",
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "normal",
-       "group": "A"
-      }
-     },
-     "min": 0,
      "decimals": 0
     },
-    "overrides": []
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "Ready|Unacked"
+      },
+      "properties": [
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       }
+      ]
+     }
+    ]
    },
    "options": {
-    "legend": {
-     "displayMode": "table",
-     "placement": "right",
-     "calcs": [
-      "lastNotNull",
-      "max"
-     ]
-    },
-    "tooltip": {
-     "mode": "multi",
-     "sort": "desc"
-    }
+    "showHeader": true
    }
   },
   {

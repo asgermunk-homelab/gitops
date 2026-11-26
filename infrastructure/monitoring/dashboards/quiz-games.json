@@ -1,7 +1,7 @@
 {
  "uid": "quiz-games",
  "title": "Slopster Games",
- "description": "GameService (SCRUM-119): games being played, games and rounds played, answers by result, and response times per endpoint. Metrics come over OTLP from meter Slopster.Game, and open game connections (SignalR).",
+ "description": "GameService (SCRUM-119): games being played, games and rounds played, the share of correct answers, and response times per endpoint. Metrics come over OTLP from meter Slopster.Game, and open game connections (SignalR).",
  "tags": [
   "quiz",
   "gameservice"
@@ -359,104 +359,6 @@
    }
   },
   {
-   "id": 8,
-   "type": "timeseries",
-   "title": "Answers per minute by result",
-   "description": "Answers judged when a round ends, correct and wrong, stacked.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "quiz-prometheus"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 0,
-    "y": 14
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "sum by (result) (rate(slopster_answers_total[$__rate_interval])) * 60",
-     "legendFormat": "{{result}}"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "min": 0,
-     "custom": {
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "normal",
-       "group": "A"
-      }
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 9,
-   "type": "timeseries",
-   "title": "Correct answer ratio",
-   "description": "Share of answers that were right.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "quiz-prometheus"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 14
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "sum(rate(slopster_answers_total{result=\"correct\"}[$__rate_interval])) / sum(rate(slopster_answers_total[$__rate_interval]))",
-     "legendFormat": "correct"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "percentunit",
-     "min": 0,
-     "custom": {
-      "fillOpacity": 15,
-      "showPoints": "never"
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
    "id": 10,
    "type": "row",
    "title": "Endpoints (GameService)",
@@ -465,7 +367,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 22
+    "y": 14
    },
    "panels": []
   },
@@ -480,9 +382,9 @@
    },
    "gridPos": {
     "h": 8,
-    "w": 12,
+    "w": 24,
     "x": 0,
-    "y": 23
+    "y": 15
    },
    "targets": [
     {
@@ -517,53 +419,6 @@
    }
   },
   {
-   "id": 12,
-   "type": "timeseries",
-   "title": "Requests /s per endpoint",
-   "description": "Requests per second by route and status code, without the SignalR hub (its WebSockets are counted in the row below).",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "quiz-prometheus"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 12,
-    "x": 12,
-    "y": 23
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "sum by (http_route, http_response_status_code) (rate(http_server_request_duration_seconds_count{k8s_deployment_name=\"gameservice\",http_route!~\".*/hubs/.*\"}[$__rate_interval]))",
-     "legendFormat": "{{http_route}} {{http_response_status_code}}"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "reqps",
-     "min": 0,
-     "custom": {
-      "fillOpacity": 15,
-      "showPoints": "never"
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
    "id": 13,
    "type": "row",
    "title": "Game connections (SignalR)",
@@ -572,7 +427,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 31
+    "y": 23
    },
    "panels": []
   },
@@ -586,10 +441,10 @@
     "uid": "quiz-prometheus"
    },
    "gridPos": {
-    "h": 8,
-    "w": 6,
+    "h": 5,
+    "w": 24,
     "x": 0,
-    "y": 32
+    "y": 24
    },
    "targets": [
     {
@@ -627,114 +482,6 @@
      "calcs": [
       "lastNotNull"
      ]
-    }
-   }
-  },
-  {
-   "id": 15,
-   "type": "timeseries",
-   "title": "Game connections per pod",
-   "description": "Open game-hub connections on each GameService pod. The games are in Redis (ADR-0004), so a player's connection can be on any pod; this shows how they spread.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "quiz-prometheus"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 10,
-    "x": 6,
-    "y": 32
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "sum by (k8s_pod_name) (signalr_server_active_connections{k8s_deployment_name=\"gameservice\"})",
-     "legendFormat": "{{k8s_pod_name}}"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "short",
-     "min": 0,
-     "decimals": 0,
-     "custom": {
-      "fillOpacity": 15,
-      "showPoints": "never",
-      "stacking": {
-       "mode": "normal",
-       "group": "A"
-      }
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
-    }
-   }
-  },
-  {
-   "id": 16,
-   "type": "timeseries",
-   "title": "How long players stay connected",
-   "description": "Median and p95 length of closed game-hub connections (signalr.server.connection.duration), i.e. roughly how long a player is in a game.",
-   "datasource": {
-    "type": "prometheus",
-    "uid": "quiz-prometheus"
-   },
-   "gridPos": {
-    "h": 8,
-    "w": 8,
-    "x": 16,
-    "y": 32
-   },
-   "targets": [
-    {
-     "refId": "A",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "histogram_quantile(0.5, sum by (le) (rate(signalr_server_connection_duration_seconds_bucket{k8s_deployment_name=\"gameservice\"}[$__rate_interval])))",
-     "legendFormat": "median"
-    },
-    {
-     "refId": "B",
-     "datasource": {
-      "type": "prometheus",
-      "uid": "quiz-prometheus"
-     },
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(signalr_server_connection_duration_seconds_bucket{k8s_deployment_name=\"gameservice\"}[$__rate_interval])))",
-     "legendFormat": "p95"
-    }
-   ],
-   "fieldConfig": {
-    "defaults": {
-     "unit": "s",
-     "min": 0,
-     "custom": {
-      "fillOpacity": 10,
-      "showPoints": "never"
-     }
-    },
-    "overrides": []
-   },
-   "options": {
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom"
-    },
-    "tooltip": {
-     "mode": "multi"
     }
    }
   }
