@@ -43,7 +43,7 @@
    "id": 2,
    "type": "stat",
    "title": "Active games",
-   "description": "Games being played right now (Status = Playing). Each GameService pod reports its own games, so the pods are summed.",
+   "description": "Games being played right now (Status = Playing). The games are in Redis, so every GameService pod reports the same total (max, not sum).",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -61,7 +61,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "sum(slopster_games_active)",
+     "expr": "max(slopster_games_active)",
      "legendFormat": "",
      "instant": true
     }
@@ -277,7 +277,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "sum(slopster_games_active)",
+     "expr": "max(slopster_games_active)",
      "legendFormat": "active games"
     }
    ],
