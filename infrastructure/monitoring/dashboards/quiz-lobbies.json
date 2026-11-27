@@ -449,7 +449,7 @@
    "id": 10,
    "type": "timeseries",
    "title": "p95 response time per endpoint",
-   "description": "From ASP.NET Core's http.server.request.duration (OpenTelemetry). One line per route.",
+   "description": "From ASP.NET Core's http.server.request.duration (OpenTelemetry). One line per route. WebSocket connections (status 101: SignalR hubs, minutes long) and health probes are left out.",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -467,7 +467,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{k8s_deployment_name=\"lobbyservice\"}[$__rate_interval])))",
+     "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{k8s_deployment_name=\"lobbyservice\", http_response_status_code!=\"101\", http_route!~\"/health.*\"}[$__rate_interval])))",
      "legendFormat": "{{http_route}}"
     }
    ],
