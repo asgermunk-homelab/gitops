@@ -239,7 +239,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "max by (replica) (quizdb_replication_sync{pod=~\"quizdb-postgresql-primary-.*\"} * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\")) == 1",
+     "expr": "max by (replica) (label_replace(quizdb_replication_sync{pod=~\"quizdb-postgresql-primary-.*\"}, \"client_addr\", \"$1\", \"client_addr\", \"([^/]+).*\") * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\")) == 1",
      "legendFormat": "{{replica}}",
      "instant": true
     }
@@ -290,7 +290,7 @@
    "id": 11,
    "type": "timeseries",
    "title": "Bytes behind the primary, per replica",
-   "description": "WAL the replica has received or not yet replayed, measured on the primary (pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)). Normally 0, with short spikes under writes.",
+   "description": "WAL the replica has received or not yet replayed, measured on the primary (pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)). Normally 0, with short spikes under writes. Postgres gives the replica's address as e.g. 10.42.0.5/32; the query strips the /32 to match the pod IP.",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
@@ -308,7 +308,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "max by (replica) (quizdb_replication_replay_lag_bytes{pod=~\"quizdb-postgresql-primary-.*\"} * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\"))",
+     "expr": "max by (replica) (label_replace(quizdb_replication_replay_lag_bytes{pod=~\"quizdb-postgresql-primary-.*\"}, \"client_addr\", \"$1\", \"client_addr\", \"([^/]+).*\") * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\"))",
      "legendFormat": "{{replica}}"
     }
    ],
@@ -354,7 +354,7 @@
       "type": "prometheus",
       "uid": "quiz-prometheus"
      },
-     "expr": "max by (replica) (quizdb_replication_replay_lag_seconds{pod=~\"quizdb-postgresql-primary-.*\"} * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\"))",
+     "expr": "max by (replica) (label_replace(quizdb_replication_replay_lag_seconds{pod=~\"quizdb-postgresql-primary-.*\"}, \"client_addr\", \"$1\", \"client_addr\", \"([^/]+).*\") * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\"))",
      "legendFormat": "{{replica}}"
     }
    ],
@@ -487,7 +487,7 @@
    "id": 22,
    "type": "timeseries",
    "title": "Transactions /s on the replicas",
-   "description": "Committed transactions per second on each replica. Only StatisticService reads here (my stats, the leaderboard fallback), so this shows the read/write split.",
+   "description": "Committed transactions per second on each replica. Only StatisticService reads here (my stats, the leaderboard fallback), so this shows the read/write split. The two replicas need not be busy alike: StatisticService's connection pool keeps the connection it opened, and the read Service chose a replica when that connection was opened.",
    "datasource": {
     "type": "prometheus",
     "uid": "quiz-prometheus"
