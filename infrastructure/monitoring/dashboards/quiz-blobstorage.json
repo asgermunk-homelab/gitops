@@ -761,7 +761,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (api_endpoint, status_code) (rate(api_s3_error_counter[$__rate_interval]))",
+          "expr": "(sum by (api_endpoint, status_code) (rate(api_s3_error_counter[$__rate_interval]))) or vector(0)",
           "legendFormat": "{{api_endpoint}} {{status_code}}"
         }
       ],
