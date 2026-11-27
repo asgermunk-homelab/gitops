@@ -49,15 +49,15 @@
     },
     {
       "id": 2,
-      "type": "stat",
+      "type": "table",
       "title": "Pods now / max",
-      "description": "Pods the HPA runs now for each service. Turns orange above the minimum (2), red at the maximum.",
+      "description": "Pods the HPA runs now for each service, next to its own minimum and maximum (read from the HPA, so it follows gitops: 10 for edge, game, user and statistics, 5 for the rest). \"At max\" turns red when a service cannot scale out any further.",
       "datasource": {
         "type": "prometheus",
         "uid": "quiz-prometheus"
       },
       "gridPos": {
-        "h": 5,
+        "h": 8,
         "w": 24,
         "x": 0,
         "y": 1
@@ -69,44 +69,166 @@
             "type": "prometheus",
             "uid": "quiz-prometheus"
           },
-          "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"}",
-          "legendFormat": "{{horizontalpodautoscaler}}",
-          "instant": true
+          "instant": true,
+          "format": "table",
+          "expr": "max by (horizontalpodautoscaler) (kube_horizontalpodautoscaler_status_current_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"})"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "max by (horizontalpodautoscaler) (kube_horizontalpodautoscaler_spec_min_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"})"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "max by (horizontalpodautoscaler) (kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"})"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "quiz-prometheus"
+          },
+          "instant": true,
+          "format": "table",
+          "expr": "max by (horizontalpodautoscaler) (kube_horizontalpodautoscaler_status_current_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"}) >= bool max by (horizontalpodautoscaler) (kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"quiz\", horizontalpodautoscaler=~\"${service:regex}\"})"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "horizontalpodautoscaler": "Service",
+              "Value #A": "Pods now",
+              "Value #B": "Min",
+              "Value #C": "Max",
+              "Value #D": "At max"
+            },
+            "indexByName": {
+              "horizontalpodautoscaler": 0,
+              "Value #A": 1,
+              "Value #B": 2,
+              "Value #C": 3,
+              "Value #D": 4
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Service"
+              }
+            ]
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
           "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+          "custom": {
+            "align": "center"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "custom.align",
+                "value": "left"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pods now"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
               },
               {
-                "color": "orange",
-                "value": 3
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 3
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "At max"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "-",
+                        "color": "transparent"
+                      },
+                      "1": {
+                        "text": "at max",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
               },
               {
-                "color": "red",
-                "value": 5
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "value_and_name",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ]
-        }
+        "showHeader": true,
+        "cellHeight": "sm"
       }
     },
     {
@@ -122,7 +244,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 6
+        "y": 9
       },
       "targets": [
         {
@@ -185,7 +307,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 6
+        "y": 9
       },
       "targets": [
         {
@@ -250,7 +372,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 17
       },
       "panels": []
     },
@@ -267,7 +389,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 15
+        "y": 18
       },
       "targets": [
         {
@@ -320,7 +442,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 15
+        "y": 18
       },
       "targets": [
         {
