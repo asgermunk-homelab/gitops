@@ -41,5 +41,6 @@ configMapGenerator:
       - dashboards/quiz-games.json
       - dashboards/quiz-rabbitmq.json
       - dashboards/quiz-statistics.json
+      - dashboards/quiz-database.json
     options:
       disableNameSuffixHash: true

@@ -1,0 +1,579 @@
+{
+ "uid": "quiz-database",
+ "title": "Slopster Database",
+ "description": "Postgres (quizdb, SCRUM-200/203): one primary and two read replicas. Which pods are up and their role, how far each replica is behind, and where reads and writes go. Metrics from the postgres-exporter sidecar on every pod.",
+ "tags": [
+  "quiz"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 41,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "editable": false,
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "row",
+   "title": "Pods: one primary and two read replicas",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "panels": []
+  },
+  {
+   "id": 2,
+   "type": "table",
+   "title": "Pods",
+   "description": "Every quizdb pod with its role and whether the exporter can reach Postgres. The primary takes reads and writes; the replicas only reads.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 10,
+    "x": 0,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (pod) (pg_up{pod=~\"quizdb-postgresql-.*\"})",
+     "instant": true,
+     "format": "table"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (pod) (pg_replication_is_replica{pod=~\"quizdb-postgresql-.*\"})",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge",
+     "options": {}
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "pod": "Pod",
+       "Value #A": "Up",
+       "Value #B": "Role"
+      }
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Up"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "1": {
+            "text": "up",
+            "color": "green"
+           },
+           "0": {
+            "text": "down",
+            "color": "red"
+           }
+          }
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "Role"
+      },
+      "properties": [
+       {
+        "id": "mappings",
+        "value": [
+         {
+          "type": "value",
+          "options": {
+           "0": {
+            "text": "primary (read + write)",
+            "color": "blue"
+           },
+           "1": {
+            "text": "replica (read only)",
+            "color": "purple"
+           }
+          }
+         }
+        ]
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-text"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "showHeader": true
+   }
+  },
+  {
+   "id": 3,
+   "type": "stat",
+   "title": "Replicas streaming",
+   "description": "Replicas connected to the primary and receiving its changes (pg_stat_replication, state = streaming). Should be 2.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 5,
+    "x": 10,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "count(quizdb_replication_replay_lag_bytes{pod=~\"quizdb-postgresql-primary-.*\", state=\"streaming\"}) or vector(0)",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 0,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "green",
+        "value": 2
+       }
+      ]
+     }
+    }
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 4,
+   "type": "stat",
+   "title": "Synchronous replica",
+   "description": "The replica every commit waits for (synchronousCommit: on, numSynchronousReplicas: 1). If it goes down, the other one takes over.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 9,
+    "x": 15,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (replica) (quizdb_replication_sync{pod=~\"quizdb-postgresql-primary-.*\"} * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\")) == 1",
+     "legendFormat": "{{replica}}",
+     "instant": true
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "green"
+     },
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "1": {
+         "text": "sync"
+        }
+       }
+      }
+     ]
+    }
+   },
+   "options": {
+    "colorMode": "background",
+    "graphMode": "none",
+    "textMode": "name",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    }
+   }
+  },
+  {
+   "id": 10,
+   "type": "row",
+   "title": "Replication lag",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 7
+   },
+   "panels": []
+  },
+  {
+   "id": 11,
+   "type": "timeseries",
+   "title": "Bytes behind the primary, per replica",
+   "description": "WAL the replica has received or not yet replayed, measured on the primary (pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn)). Normally 0, with short spikes under writes.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (replica) (quizdb_replication_replay_lag_bytes{pod=~\"quizdb-postgresql-primary-.*\"} * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\"))",
+     "legendFormat": "{{replica}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 12,
+   "type": "timeseries",
+   "title": "Replay lag, per replica",
+   "description": "How long the replica took to replay the latest changes, measured on the primary (pg_stat_replication.replay_lag). 0 when it is caught up.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (replica) (quizdb_replication_replay_lag_seconds{pod=~\"quizdb-postgresql-primary-.*\"} * on (client_addr) group_left (replica) label_replace(label_replace(kube_pod_info{namespace=\"quiz\", pod=~\"quizdb-postgresql-read-.*\"}, \"client_addr\", \"$1\", \"pod_ip\", \"(.*)\"), \"replica\", \"$1\", \"pod\", \"(.*)\"))",
+     "legendFormat": "{{replica}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 13,
+   "type": "timeseries",
+   "title": "Time since the last replayed transaction (on each replica)",
+   "description": "Measured on the replica itself: now() minus the time of the last transaction it replayed. It also grows while nothing is written, so read it together with the bytes panel: bytes 0 and this rising means idle, not behind.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 16
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "max by (pod) (pg_replication_lag_seconds{pod=~\"quizdb-postgresql-read-.*\"})",
+     "legendFormat": "{{pod}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 20,
+   "type": "row",
+   "title": "Reads and writes",
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 23
+   },
+   "panels": []
+  },
+  {
+   "id": 21,
+   "type": "timeseries",
+   "title": "Transactions /s on the primary, per database",
+   "description": "Committed transactions per second on the primary: every write of every service, and the reads of UserService and MusicService.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 24
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (datname) (rate(pg_stat_database_xact_commit{pod=~\"quizdb-postgresql-primary-.*\", datname=~\"userservice|musicservice|statisticservice\"}[$__rate_interval]))",
+     "legendFormat": "{{datname}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 22,
+   "type": "timeseries",
+   "title": "Transactions /s on the replicas",
+   "description": "Committed transactions per second on each replica. Only StatisticService reads here (my stats, the leaderboard fallback), so this shows the read/write split.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 24
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (pod) (rate(pg_stat_database_xact_commit{pod=~\"quizdb-postgresql-read-.*\", datname=~\"userservice|musicservice|statisticservice\"}[$__rate_interval]))",
+     "legendFormat": "{{pod}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "id": 23,
+   "type": "timeseries",
+   "title": "Connections per pod",
+   "description": "Open connections to the three service databases, per pod.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "quiz-prometheus"
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 32
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "quiz-prometheus"
+     },
+     "expr": "sum by (pod) (pg_stat_database_numbackends{pod=~\"quizdb-postgresql-.*\", datname=~\"userservice|musicservice|statisticservice\"})",
+     "legendFormat": "{{pod}}"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "min": 0,
+     "custom": {
+      "fillOpacity": 10
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom"
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  }
+ ]
+}
