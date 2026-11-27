@@ -19,50 +19,17 @@
       {
         "name": "service",
         "label": "Service",
-        "type": "custom",
-        "query": "edgeservice,frontend,userservice,musicservice,statisticservice",
+        "description": "Every service with an HPA in the namespace quiz (kube-state-metrics), so a newly autoscaled service shows up by itself. The old fixed list missed GameService and LobbyService.",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "quiz-prometheus" },
+        "query": { "query": "label_values(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"quiz\"}, horizontalpodautoscaler)", "refId": "PrometheusVariableQueryEditor-VariableQuery", "qryType": 1 },
+        "definition": "label_values(kube_horizontalpodautoscaler_spec_max_replicas{namespace=\"quiz\"}, horizontalpodautoscaler)",
+        "refresh": 1,
+        "sort": 1,
         "multi": true,
         "includeAll": true,
-        "current": {
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
-        },
-        "options": [
-          {
-            "text": "All",
-            "value": "$__all",
-            "selected": true
-          },
-          {
-            "text": "edgeservice",
-            "value": "edgeservice",
-            "selected": false
-          },
-          {
-            "text": "frontend",
-            "value": "frontend",
-            "selected": false
-          },
-          {
-            "text": "userservice",
-            "value": "userservice",
-            "selected": false
-          },
-          {
-            "text": "musicservice",
-            "value": "musicservice",
-            "selected": false
-          },
-          {
-            "text": "statisticservice",
-            "value": "statisticservice",
-            "selected": false
-          }
-        ]
+        "current": { "text": ["All"], "value": ["$__all"] },
+        "options": []
       }
     ]
   },
